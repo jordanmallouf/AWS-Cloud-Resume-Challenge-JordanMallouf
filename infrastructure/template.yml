@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cloud Resume Challenge Resources
+
+Resources:
+
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: my-cloud-resume-challenge-website.com
+
+  VisitorCounterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: VisitorCounter
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  VisitorCounterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: VisitorCounterFunction
+      Handler: app.lambda_handler
+      Runtime: python3.13
+      Role: arn:aws:iam::039612862892:role/service-role/VisitorCounterFunction-role-jijw8toi
+      Code: 
+        S3Bucket: my-cloud-resume-challenge-website.com
+        S3Key: lambda.zip
+      Environment:
+        Variables:
+          TABLE_NAME: VisitorCounter
+      Tracing: Active
+
+  VisitorCounterApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: VisitorCounterAPI
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+
+  VisitorCounterIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: ln4bofmpuk
+      IntegrationType: AWS_PROXY
+      IntegrationUri: arn:aws:lambda:us-east-1:039612862892:function:VisitorCounterFunction
+      PayloadFormatVersion: '2.0'
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: my-cloud-resume-challenge-website.com.s3.amazonaws.com
+            S3OriginConfig:
+              OriginAccessIdentity: origin-access-identity/cloudfront/E2I0ZCF4ORPKJ8
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: false
+          Compress: true
+        Enabled: true
+        ViewerCertificate:
+          AcmCertificateArn: arn:aws:acm:us-east-1:039612862892:certificate/1421a477-7495-4df8-9a88-9b5116b2eae4
+          SslSupportMethod: sni-only
+
+Outputs:
+
+  WebsiteUrl:
+    Description: URL for the website hosted on S3
+    Value: 'http://my-cloud-resume-challenge-website.com.s3-website-us-east-1.amazonaws.com/'
+
+  VisitorCounterApiEndpoint:
+    Description: API Gateway endpoint URL for Visitor Counter
+    Value: 'https://ln4bofmpuk.execute-api.us-east-1.amazonaws.com/prod/visitor-counter'
+
+  CloudFrontUrl:
+    Description: CloudFront Distribution URL
+    Value: 'https://dj4id5xhgkb71.cloudfront.net'

@@ -40,4 +40,11 @@ __Frontend__: Syncs files to S3 and invalidates CloudFront cache, ensuring that 
 __Backend__: Deploys Lambda function and updates infrastructure with AWS SAM.
 
 # How It's Organized
-![Project Directory](
+
+
+
+│   ├── lambda.zip
+
+├── infrastructure/
+
+│   ├── template.yml
